@@ -1,0 +1,7 @@
+schema: "classroom50/repo-config/v1"
+classroom: "csds-293"
+assignment: "assignment-4"
+owner:
+  username: "josephblandon717"
+  id: 255600102
+  accepted_at: "2026-09-18T23:36:56Z"
