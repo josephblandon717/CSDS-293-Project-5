@@ -14,6 +14,7 @@ import java.util.NavigableSet;
 import java.util.Objects;
 import java.util.TreeMap;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 /**
@@ -64,13 +65,9 @@ public final class EntryMap<T>{
 	 * @return the largest column in the entryMap
 	 */
 	public int columns() {
-		NavigableSet<Coordinates> keySet = this.entryMap.descendingKeySet();
-		int columns = 0;
-		for(Coordinates coordinates : keySet) {
-			if(coordinates.col() > columns)
-				columns = coordinates.col();
-		}
-		return columns + 1;
+		return this.entryMap.keySet().stream()
+				.map(coordinates -> coordinates.col())
+				.max(Integer::compare).get() + 1;
 	}
 	
 	/**
@@ -100,11 +97,7 @@ public final class EntryMap<T>{
 	 * @return the value at the coordinates or the default value
 	 */
 	public T getOrDefault(Coordinates coordinates, T defaultValue) {
-		if(entryMap.get(coordinates) != null)
-			return entryMap.get(coordinates);
-		else 
-			return defaultValue;
-		
+		return entryMap.getOrDefault(coordinates, defaultValue);
 	}
 	
 	/**
@@ -113,12 +106,8 @@ public final class EntryMap<T>{
 	 * @return the stream of entries
 	 */
 	public Stream<Entry<T>> stream() {
-		List<Entry<T>> entries = new ArrayList<Entry<T>>();
-		NavigableSet<Coordinates> keySet = this.entryMap.descendingKeySet();
-		for (Coordinates coordinates : keySet) {
-			entries.add(new Entry<T>(coordinates, this.get(coordinates)));
-		}
-		return entries.stream();
+		return this.entryMap.descendingKeySet().stream()
+				.map(coordinates -> new Entry<T>(coordinates, entryMap.get(coordinates)));
 	}
 	
 	/**
@@ -133,6 +122,8 @@ public final class EntryMap<T>{
 			Function<T, T> valueMapper){
 		Objects.requireNonNull(coordinatesMapper);
 		Objects.requireNonNull(valueMapper);
+		
+		this.stream().collect(Collectors.toMap(null, null))
 		NavigableMap<Coordinates, T> newEntries = new TreeMap<Coordinates, T>();
 		
 		this.stream().forEach(entry -> 
@@ -149,13 +140,11 @@ public final class EntryMap<T>{
  	 * @return the size rounded up to the nearest power of 2
  	 */
  	public int sizeRounded() {
-		 int timesDivided = 0;
-		 double dividend = this.getSize();
-		 while(1 < dividend) {
-			 dividend = dividend / 2;
-			 timesDivided++;
+		 int size = this.getSize();
+		 int power = 1;
+		 while(power < size) {
+			 power = power * 2;
 		 }
-		 return (int)Math.pow(2, timesDivided);
-		 
+		 return power;
 	} 
 }

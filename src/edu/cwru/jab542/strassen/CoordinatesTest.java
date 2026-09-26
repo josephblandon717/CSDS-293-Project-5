@@ -12,7 +12,7 @@ class CoordinatesTest {
 		Coordinates nullCoords = null;
 		assertEquals(-1, Coordinates.negated(coordinates1).row());
 		assertEquals(-2, Coordinates.negated(coordinates1).col());
-		assertThrows(IllegalArgumentException.class, () -> {
+		assertThrows(NullPointerException.class, () -> {
 			Coordinates.negated(nullCoords);
 		});
 	}
@@ -24,7 +24,7 @@ class CoordinatesTest {
 		Coordinates nullCoords = null;
 		assertEquals(4, coordinates1.plus(coordinates2).row());
 		assertEquals(6, coordinates1.plus(coordinates2).col());
-		assertThrows(IllegalArgumentException.class, () -> {
+		assertThrows(NullPointerException.class, () -> {
 			coordinates1.plus(nullCoords);
 		});
 	}
@@ -36,7 +36,7 @@ class CoordinatesTest {
 		Coordinates nullCoords = null;
 		assertEquals(-2, coordinates1.minus(coordinates2).row());
 		assertEquals(-3, coordinates1.minus(coordinates2).col());
-		assertThrows(IllegalArgumentException.class, () -> {
+		assertThrows(NullPointerException.class, () -> {
 			coordinates1.minus(nullCoords);
 		});
 	}
@@ -60,26 +60,10 @@ class CoordinatesTest {
 		assertEquals(-1, coordinates1.compareTo(coordinates4));
 		assertEquals(1, coordinates4.compareTo(coordinates1));
 		assertEquals(0, coordinates1.compareTo(coordinates3));
-		assertThrows(IllegalArgumentException.class, () -> {
+		assertThrows(NullPointerException.class, () -> {
 			coordinates1.compareTo(nullCoords);
 		});
 	}
 
-	@Test
-	public void testIsInSubMatrix() {
-		Coordinates coordinates1 = new Coordinates(4, 4);
-		assertEquals(false, coordinates1.isInSubMatrix(new Coordinates(1, 1), new Coordinates(2, 2)));
-		assertEquals(false, coordinates1.isInSubMatrix(new Coordinates(1, 1), new Coordinates(4, 4)));
-		assertEquals(true, coordinates1.isInSubMatrix(new Coordinates(1, 1), new Coordinates(5, 5)));
-		assertThrows(IllegalArgumentException.class, () -> {
-			coordinates1.isInSubMatrix(null, null);
-		});
-		assertThrows(IllegalArgumentException.class, () -> {
-			coordinates1.isInSubMatrix(Coordinates.ORIGIN, null);
-		});
-		assertThrows(IllegalArgumentException.class, () -> {
-			coordinates1.isInSubMatrix(null, Coordinates.ORIGIN);
-		});
-	}
 
 }

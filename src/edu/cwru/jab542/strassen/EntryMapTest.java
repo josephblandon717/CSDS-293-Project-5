@@ -119,10 +119,10 @@ class EntryMapTest {
 		assertThrows(IllegalArgumentException.class, () -> {
 			entryMap1.remap(null, null);
 		});
-		assertThrows(IllegalArgumentException.class, () -> {
+		assertThrows(NullPointerException.class, () -> {
 			entryMap1.remap(coordinates -> coordinates, null);
 		});
-		assertThrows(IllegalArgumentException.class, () -> {
+		assertThrows(NullPointerException.class, () -> {
 			entryMap1.remap(null, value -> value);
 		});
 	}

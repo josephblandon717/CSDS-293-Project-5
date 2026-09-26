@@ -74,7 +74,7 @@ public record Coordinates(int row, int col) implements Comparable<Coordinates>{
 	 */
 	public Coordinates minus(Coordinates offset) {
 		Objects.requireNonNull(offset);
-		return new Coordinates(this.row - offset.row, this.col - offset.col);
+		return this.plus(Coordinates.negated(offset));
 	}
 	
 	/**
@@ -103,6 +103,13 @@ public record Coordinates(int row, int col) implements Comparable<Coordinates>{
 	}
 	
 	/**
+	 * Checks if the given value is within the range given by the lower and upper value. 
+	 */
+	private static boolean isInRange(int value, int lower, int upper) {
+		return ((lower <= value) && (value < upper));
+	}
+	
+	/**
 	 * Checks if the reference coordinates is within specified rows.
 	 * Inclusive to the lower bound, exclusive to the higher bound.
 	 * Helper function for isInSubMatrix.
@@ -111,8 +118,8 @@ public record Coordinates(int row, int col) implements Comparable<Coordinates>{
 	 * @param upper the upper bound
 	 * @return true, if they are within the specified rows; false otherwise
 	 */
-	private boolean isInRows(int lower, int upper) {
-		return ((lower <= this.row) && (this.row < upper));
+	public boolean isInRows(int lower, int upper) {
+		return Coordinates.isInRange(this.row, lower, upper);
 	}
 	
 	/**
@@ -124,21 +131,8 @@ public record Coordinates(int row, int col) implements Comparable<Coordinates>{
 	 * @param upper the upper bound 
 	 * @return true, if coordinates are within the specified columns; false otherwise
 	 */
-	private boolean isInColumns(int lower, int upper) {
-		return ((lower <= this.col) && (this.col < upper));
+	public boolean isInColumns(int lower, int upper) {
+		return Coordinates.isInRange(this.col, lower, upper);
 	}
-	
-	/**
-	 * Checks if the reference coordinates is within specified subMatrix.
-	 * Inclusive to the lower bound, exclusive to the higher bound.
-	 *
-	 * @param lower the lower bound
-	 * @param upper the upper bound
-	 * @return true, if coordinates are in sub matrix; false otherwise
-	 */
-	public boolean isInSubMatrix(Coordinates lower, Coordinates upper) {
-		Objects.requireNonNull(lower);
-		Objects.requireNonNull(upper);
-		return (this.isInRows(lower.row(), upper.row()) && this.isInColumns(lower.col(), upper.col()));
-	}
+
 }

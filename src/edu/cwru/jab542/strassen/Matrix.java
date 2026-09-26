@@ -6,6 +6,7 @@ package edu.cwru.jab542.strassen;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
+import java.util.Objects;
 import java.util.TreeMap;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -95,6 +96,20 @@ public final class Matrix {
 	}
 
 	/**
+	 * Checks if the reference coordinates is within specified subMatrix.
+	 * Inclusive to the lower bound, exclusive to the higher bound.
+	 *
+	 * @param lower the lower bound
+	 * @param upper the upper bound
+	 * @return true, if coordinates are in sub matrix; false otherwise
+	 */
+	private static boolean isInSubMatrix(Coordinates lower, Coordinates upper) {
+		Objects.requireNonNull(lower);
+		Objects.requireNonNull(upper);
+		return (lower.isInRows(lower.row(), upper.row()) && upper.isInColumns(lower.col(), upper.col()));
+	}
+	
+	/**
 	 * Negates all values in the matrix.
 	 *
 	 * @return the negated matrix
@@ -113,7 +128,8 @@ public final class Matrix {
 	 * @return the sub matrix
 	 */
 	public Matrix subMatrix(Coordinates origin, Coordinates bound) {
-		return Matrix.from(this.representation.stream().filter(entry -> (entry.isInSubMatrix(origin, bound)))
+		return Matrix.from(this.representation.stream()
+				.filter(entry -> (Matrix.isInSubMatrix(origin, bound)))
 				.collect(Collectors.toMap((entry -> entry.coordinates().minus(origin)), (entry -> entry.value()))));
 	}
 
