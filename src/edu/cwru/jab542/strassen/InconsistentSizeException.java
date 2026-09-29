@@ -5,6 +5,7 @@
  */
 package edu.cwru.jab542.strassen;
 
+import java.util.Objects;
 import java.util.Optional;
 
 /**
@@ -72,16 +73,7 @@ public class InconsistentSizeException extends Exception{
 	 * @throws IllegalArgumentException when matrices are of unequal sizes 
 	 */
 	public static void validate(int referenceSize, Matrix otherMatrix) throws IllegalArgumentException{
-		if (otherMatrix == null)
-			throw new IllegalArgumentException("Given matrix is null.");
-		
-		if (otherMatrix.getSize() != referenceSize) {
-			 InconsistentSizeException exception = new InconsistentSizeException(
-					 referenceSize, 
-					 otherMatrix.getSize(), 
-					 null);
-			 throw new IllegalArgumentException(exception);
-		}
+		InconsistentSizeException.validate(referenceSize, otherMatrix, Optional.empty());
 	}
 	
 	/**
@@ -96,14 +88,20 @@ public class InconsistentSizeException extends Exception{
 			int referenceSize, 
 			Matrix otherMatrix, 
 			Optional<Coordinates> quadrant) throws IllegalArgumentException{
+
+		Objects.requireNonNull(otherMatrix);
 		
-		InconsistentSizeException.validate(referenceSize, otherMatrix);
-		
-		if(!quadrant.isPresent()) 
-			throw new IllegalArgumentException("Given quadrant is null.");
-		
-		
+		int otherSize = otherMatrix.getSize();
+
+		if (otherSize != referenceSize) {
+			InconsistentSizeException exception = new InconsistentSizeException(
+					referenceSize, 
+					otherSize, 
+					quadrant);
+			throw new IllegalArgumentException(exception);
+		}
+
 	}
-	
-	
+
+
 }

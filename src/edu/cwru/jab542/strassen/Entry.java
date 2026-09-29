@@ -30,6 +30,7 @@ public record Entry<T>(Coordinates coordinates, T value) {
 	 * @return entry with the sum of the offset and reference coordinates
 	 */
 	public Entry<T> translated(Coordinates offset){
+		Objects.requireNonNull(offset);
 		return new Entry<T>(coordinates.plus(offset), value);
 	}
 	

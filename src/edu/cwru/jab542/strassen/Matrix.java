@@ -3,13 +3,11 @@
  */
 package edu.cwru.jab542.strassen;
 
-import java.util.List;
 import java.util.Map;
-import java.util.NavigableMap;
 import java.util.Objects;
-import java.util.TreeMap;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * The Class Matrix.
@@ -44,10 +42,8 @@ public final class Matrix {
 	 * @return the matrix
 	 */
 	public static Matrix from(Map<Coordinates, Float> entryMap) {
-		if (!entryMap.isEmpty())
-			return new Matrix(EntryMap.from(entryMap));
-		else
-			throw new IllegalArgumentException("Entry map given is empty.");
+		Objects.requireNonNull(entryMap);
+		return new Matrix(EntryMap.from(entryMap));
 	}
 
 	/**
@@ -76,10 +72,7 @@ public final class Matrix {
 	 * @return the value
 	 */
 	public float get() {
-		if (representation.get(Coordinates.ORIGIN) == null)
-			return 0;
-		else
-			return representation.get(Coordinates.ORIGIN);
+		return this.get(Coordinates.ORIGIN);
 	}
 
 	/**
@@ -89,24 +82,22 @@ public final class Matrix {
 	 * @return the value
 	 */
 	public float get(Coordinates coordinates) {
-		if (representation.get(coordinates) == null)
-			return 0;
-		else
-			return representation.get(coordinates);
+		return this.representation.getOrDefault(coordinates, (float) 0);
 	}
 
 	/**
 	 * Checks if the reference coordinates is within specified subMatrix.
 	 * Inclusive to the lower bound, exclusive to the higher bound.
+	 * @param <T>
 	 *
 	 * @param lower the lower bound
 	 * @param upper the upper bound
 	 * @return true, if coordinates are in sub matrix; false otherwise
 	 */
-	private static boolean isInSubMatrix(Coordinates lower, Coordinates upper) {
+	private static boolean isInSubMatrix(Entry<Float> entry, Coordinates lower, Coordinates upper) {
 		Objects.requireNonNull(lower);
 		Objects.requireNonNull(upper);
-		return (lower.isInRows(lower.row(), upper.row()) && upper.isInColumns(lower.col(), upper.col()));
+		return (entry.coordinates().isInRows(lower.row(), upper.row()) && entry.coordinates().isInColumns(lower.col(), upper.col()));
 	}
 	
 	/**
@@ -115,9 +106,8 @@ public final class Matrix {
 	 * @return the negated matrix
 	 */
 	public Matrix negated() {
-		Function<Coordinates, Coordinates> doesNothing = coordinates -> coordinates;
 		Function<Float, Float> negates = value -> value * -1;
-		return new Matrix(representation.remap(doesNothing, negates));
+		return new Matrix(representation.remap(Function.identity(), negates));
 	}
 
 	/**
@@ -128,9 +118,18 @@ public final class Matrix {
 	 * @return the sub matrix
 	 */
 	public Matrix subMatrix(Coordinates origin, Coordinates bound) {
-		return Matrix.from(this.representation.stream()
-				.filter(entry -> (Matrix.isInSubMatrix(origin, bound)))
-				.collect(Collectors.toMap((entry -> entry.coordinates().minus(origin)), (entry -> entry.value()))));
+		return Matrix.from(this.stream()
+				.filter(entry -> (Matrix.isInSubMatrix(entry, origin, bound)))
+				.collect(Collectors.toMap((entry -> entry.coordinates().minus(origin)), (Entry::value))));
+	}
+	
+	/**
+	 * Returns a stream from the Matrix
+	 * 
+	 * @return the stream of the matrix
+	 */
+	public Stream<Entry<Float>> stream() {
+		return this.representation.stream();
 	}
 
 	/**
@@ -143,16 +142,13 @@ public final class Matrix {
 	 */
 	public Matrix plus(Matrix other) {
 		InconsistentSizeException.validate(this.getSize(), other);
-		List<Entry<Float>> referenceEntries = this.representation.stream().toList();
-		NavigableMap<Coordinates, Float> sumMap = new TreeMap<Coordinates, Float>();
-		for (Entry<Float> entry : referenceEntries) {
-			sumMap.put(entry.coordinates(), (entry.value() + other.get(entry.coordinates())));
-		}
-		List<Entry<Float>> otherEntries = other.representation.stream().toList();
-		for (Entry<Float> entry : otherEntries) {
-			sumMap.put(entry.coordinates(), (entry.value() + this.get(entry.coordinates())));
-		}
-		return new Matrix(EntryMap.from(sumMap));
+	
+		return Matrix.from(Stream.concat(this.stream(), other.stream()) // Merges the streams made by this and the other matrix
+				.collect(Collectors.toMap( // Collects each entry of the stream to a map
+						Entry::coordinates, 
+						Entry::value, 
+						// Merge function, resolves duplicate keys by adding the values of each duplicate entry
+						(referenceValue, otherValue) -> referenceValue + otherValue))); 
 	}
 
 	/**
@@ -167,7 +163,19 @@ public final class Matrix {
 	public Matrix minus(Matrix other) {
 		return this.plus(other.negated());
 	}
-
+	
+	/**
+	 * Returns a value depending on if the offset is true or not.
+	 * Helper for quadrant.
+	 * 
+	 * 
+	 * @param offset true if the quadrant is offset, false otherwise
+	 * @return the amount the quadrant is offset by
+	 */
+	private Coordinates getOriginOffset(boolean horizontalOffset, boolean verticalOffset) {
+		return new Coordinates(Boolean.compare(horizontalOffset, false), Boolean.compare(verticalOffset, false))
+				.times(this.getSize() / 2);
+	}
 	/**
 	 * Returns a submatrix that is a quadrant of the reference matrix.
 	 * 
@@ -178,24 +186,15 @@ public final class Matrix {
 	 * @return a submatrix that is a quadrant of the reference matrix
 	 */
 	public Matrix quadrant(boolean horizontalOffset, boolean verticalOffset) {
-		int horizontalCoordinate = 0;
-		int verticalCoordinate = 0;
+		
+		Coordinates origin = this.getOriginOffset(horizontalOffset, verticalOffset);
+		
+		// Math.ceilDiv(a, b) returns a / b rounded to the next whole integer, so quadrant size can't be less than 1.
+		int quadrantSize = Math.ceilDiv(this.getSize(), 2);
 
-		if (horizontalOffset) {
-			horizontalCoordinate = (this.getSize() / 2);
-		}
-
-		if (verticalOffset) {
-			verticalCoordinate = (this.getSize() / 2);
-		}
-
-		Coordinates origin = new Coordinates(horizontalCoordinate, verticalCoordinate);
-
-		// The bound will be the origin offset by a quarter of the reference matrix's
-		// size
-		// Math.ceilDiv(a, b) returns a / b rounded to the next whole integer.
+		// The bound will be the origin offset by half of the reference matrix's size
 		Coordinates bound = origin
-				.plus(new Coordinates(Math.ceilDiv(this.getSize(), 2), Math.ceilDiv(this.getSize(), 2)));
+				.plus(new Coordinates(quadrantSize, quadrantSize));
 		return this.subMatrix(origin, bound);
 	}
 
@@ -206,12 +205,11 @@ public final class Matrix {
 	 * @return Quadrants object
 	 */
 	private Quadrant makeQuadrants() {
-		Map<Coordinates, Matrix> quadrantsMap = new TreeMap<Coordinates, Matrix>();
-		quadrantsMap.put(Coordinates.ORIGIN, this.quadrant(false, false));
-		quadrantsMap.put(Coordinates.VERTICAL_UNIT, this.quadrant(false, true));
-		quadrantsMap.put(Coordinates.HORIZONTAL_UNIT, this.quadrant(true, false));
-		quadrantsMap.put(Coordinates.DIAGONAL_UNIT, this.quadrant(true, true));
-		return Quadrant.from(quadrantsMap);
+		return Quadrant.from(Map.of(
+						Coordinates.ORIGIN, this.quadrant(false, false),
+						Coordinates.VERTICAL_UNIT, this.quadrant(false, true), 
+						Coordinates.HORIZONTAL_UNIT, this.quadrant(true, false),
+						Coordinates.DIAGONAL_UNIT, this.quadrant(true, true)));
 	}
 
 	/**
@@ -221,25 +219,22 @@ public final class Matrix {
 	 * @return the matrix product of this and the other matrix
 	 */
 	public Matrix times(Matrix other) {
+		
+		int size = this.getSize();
 
-		InconsistentSizeException.validate(this.getSize(), other);
+		InconsistentSizeException.validate(size, other);
 
 		// If both matrices are size 1, will return a one element matrix of the products
 		// of the reference and other matrix.
-		if (this.getSize() == 1 && other.getSize() == 1) {
-			NavigableMap<Coordinates, Float> sizeOneMatrix = new TreeMap<Coordinates, Float>();
-
-			sizeOneMatrix.put(Coordinates.ORIGIN, this.get() * other.get());
-
-			return Matrix.from(sizeOneMatrix);
+		if (size == 1) {
+			return Matrix.from(this.stream()
+					.collect(Collectors.toMap(Entry::coordinates, entry -> entry.value() * other.get())));
 		}
 
-		EntryMap<Matrix> referenceQuadrants = this.makeQuadrants().getQuadrants();
-		EntryMap<Matrix> otherQuadrants = other.makeQuadrants().getQuadrants();
-		
-		NavigableMap<Coordinates, Matrix> productsMap = Matrix.strassenProduct(referenceQuadrants, otherQuadrants);
+		Quadrant referenceQuadrants = this.makeQuadrants();
+		Quadrant otherQuadrants = other.makeQuadrants();
 
-		return Quadrant.from(productsMap).toMatrix();
+		return Matrix.strassenProduct(referenceQuadrants, otherQuadrants).toMatrix();
 	}
 
 	/**
@@ -250,35 +245,65 @@ public final class Matrix {
 	 * @param otherQuadrants the quadrants of the other matrix
 	 * @return a NavigableMap of the product of the reference and other matrix
 	 */
-	private static NavigableMap<Coordinates, Matrix> strassenProduct(EntryMap<Matrix> referenceQuadrants, EntryMap<Matrix> otherQuadrants) {
+	private static Quadrant strassenProduct(Quadrant referenceQuadrants, Quadrant otherQuadrants) {
 
+		Matrix a = referenceQuadrants.get(Coordinates.ORIGIN);
+		Matrix b = referenceQuadrants.get(Coordinates.HORIZONTAL_UNIT);
+		Matrix c = referenceQuadrants.get(Coordinates.VERTICAL_UNIT);
+		Matrix d = referenceQuadrants.get(Coordinates.DIAGONAL_UNIT);
+		
+		Matrix e = otherQuadrants.get(Coordinates.ORIGIN);
+		Matrix f = otherQuadrants.get(Coordinates.HORIZONTAL_UNIT);
+		Matrix g = otherQuadrants.get(Coordinates.VERTICAL_UNIT);
+		Matrix h = otherQuadrants.get(Coordinates.DIAGONAL_UNIT);
+		
 		// Strassen Products
-		Matrix strassenOne = referenceQuadrants.get(Coordinates.ORIGIN).times(
-				otherQuadrants.get(Coordinates.HORIZONTAL_UNIT).minus(otherQuadrants.get(Coordinates.DIAGONAL_UNIT)));
-		Matrix strassenTwo = referenceQuadrants.get(Coordinates.ORIGIN)
-				.plus(referenceQuadrants.get(Coordinates.HORIZONTAL_UNIT))
-				.times(otherQuadrants.get(Coordinates.DIAGONAL_UNIT));
-		Matrix strassenThree = referenceQuadrants.get(Coordinates.VERTICAL_UNIT)
-				.plus(referenceQuadrants.get(Coordinates.DIAGONAL_UNIT)).times(otherQuadrants.get(Coordinates.ORIGIN));
-		Matrix strassenFour = referenceQuadrants.get(Coordinates.DIAGONAL_UNIT)
-				.times(otherQuadrants.get(Coordinates.VERTICAL_UNIT).minus(otherQuadrants.get(Coordinates.ORIGIN)));
-		Matrix strassenFive = referenceQuadrants.get(Coordinates.ORIGIN)
-				.plus(referenceQuadrants.get(Coordinates.DIAGONAL_UNIT))
-				.times(otherQuadrants.get(Coordinates.ORIGIN).plus(otherQuadrants.get(Coordinates.DIAGONAL_UNIT)));
-		Matrix strassenSix = referenceQuadrants.get(Coordinates.HORIZONTAL_UNIT)
-				.minus(referenceQuadrants.get(Coordinates.DIAGONAL_UNIT)).times(otherQuadrants
-						.get(Coordinates.VERTICAL_UNIT).plus(otherQuadrants.get(Coordinates.DIAGONAL_UNIT)));
-		Matrix strassenSeven = referenceQuadrants.get(Coordinates.ORIGIN)
-				.minus(referenceQuadrants.get(Coordinates.VERTICAL_UNIT))
-				.times(otherQuadrants.get(Coordinates.ORIGIN).plus(otherQuadrants.get(Coordinates.HORIZONTAL_UNIT)));
+		Matrix strassenOne = a.times(f.minus(h));
+		Matrix strassenTwo = a.plus(b).times(h);
+		Matrix strassenThree = c.plus(d).times(e);
+		Matrix strassenFour = d.times(g.minus(e));
+		Matrix strassenFive = a.plus(d).times(e.plus(h));
+		Matrix strassenSix = b.minus(d).times(g.plus(h));
+		Matrix strassenSeven = a.minus(c).times(e.plus(f));
 
 		// Product quadrants build from the sums of strassen products
-		NavigableMap<Coordinates, Matrix> productsMap = new TreeMap<Coordinates, Matrix>();
-		productsMap.put(Coordinates.ORIGIN, strassenFive.plus(strassenSix).plus(strassenFour).minus(strassenTwo));
-		productsMap.put(Coordinates.HORIZONTAL_UNIT, strassenOne.plus(strassenTwo));
-		productsMap.put(Coordinates.VERTICAL_UNIT, strassenThree.plus(strassenFour));
-		productsMap.put(Coordinates.DIAGONAL_UNIT,strassenOne.minus(strassenSeven).minus(strassenThree).plus(strassenFive));
+		return Quadrant.from(Map.of(
+				Coordinates.ORIGIN, strassenFive.plus(strassenSix).plus(strassenFour).minus(strassenTwo), 
+				Coordinates.HORIZONTAL_UNIT, strassenOne.plus(strassenTwo), 
+				Coordinates.VERTICAL_UNIT, strassenThree.plus(strassenFour), 
+				Coordinates.DIAGONAL_UNIT,strassenOne.minus(strassenSeven).minus(strassenThree).plus(strassenFive)));
+	}
+	
+	/**
+	 * Turns this matrix to a string.
+	 * 
+	 * @return string of this matrix
+	 */
+	public String toString() {
+		StringBuilder matrixString = new StringBuilder();
+		int size = this.getSize();
 		
-		return productsMap;
+		for(int row = 0; row < size; row++) {
+			matrixString.append("[ ");
+			for(int col = 0; col < size; col++) {
+				matrixString.append(this.get(new Coordinates(row, col)));
+				matrixString.append(" ");
+			}
+			matrixString.append("]");
+			matrixString.append(System.lineSeparator());
+		}
+		
+		return matrixString.toString();
+	}
+	
+	/**
+	 * 
+	 * 
+	 */
+	public static void main(String[] args) {
+		Matrix firstMatrix = readMatrix();
+		Matrix secondMatrix = readMatrix();
+		
+		System.out.println(firstMatrix.times(secondMatrix));
 	}
 }

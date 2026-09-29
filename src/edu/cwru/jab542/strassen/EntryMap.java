@@ -6,11 +6,8 @@
  */
 package edu.cwru.jab542.strassen;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
-import java.util.NavigableSet;
 import java.util.Objects;
 import java.util.TreeMap;
 import java.util.function.Function;
@@ -44,10 +41,8 @@ public final class EntryMap<T>{
 	 * @return EntryMap<T> object
 	 */
 	public static <T> EntryMap<T> from(Map<Coordinates, T> entryMap){
-		if (!entryMap.isEmpty()) 
-			return new EntryMap<T>(new TreeMap<Coordinates, T>(entryMap));
-		else 
-			throw new IllegalArgumentException("Entry map given is empty.");	
+		Objects.requireNonNull(entryMap);
+		return new EntryMap<T>(new TreeMap<Coordinates, T>(entryMap));
 	}
 	
 	/**
@@ -120,18 +115,14 @@ public final class EntryMap<T>{
 	public EntryMap<T> remap(
 			Function<Coordinates, Coordinates> coordinatesMapper, 
 			Function<T, T> valueMapper){
+		
 		Objects.requireNonNull(coordinatesMapper);
 		Objects.requireNonNull(valueMapper);
 		
-		this.stream().collect(Collectors.toMap(null, null))
-		NavigableMap<Coordinates, T> newEntries = new TreeMap<Coordinates, T>();
-		
-		this.stream().forEach(entry -> 
-		newEntries.put(
-				coordinatesMapper.apply(entry.coordinates()), valueMapper.apply(entry.value())
-				));
-		
-		return EntryMap.from(newEntries);
+		return EntryMap.from(this.stream()
+			.collect(Collectors.toMap(
+					entry -> coordinatesMapper.apply(entry.coordinates()), 
+					entry -> valueMapper.apply(entry.value()))));
 	}
 	
 	 /**

@@ -8,6 +8,7 @@ import java.util.Map;
 import java.util.TreeMap;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Assertions;
 
 class MatrixTest {
 
@@ -17,8 +18,8 @@ class MatrixTest {
 		map1.put(new Coordinates(1, 2), (float) 2);
 		assertEquals(true, map1.equals(Matrix.from(map1).getRepresentation().entryMap));
 		
-		Map<Coordinates, Float> map2 = new HashMap<Coordinates, Float>();
-		assertThrows(IllegalArgumentException.class, () -> {
+		Map<Coordinates, Float> map2 = null;
+		assertThrows(NullPointerException.class, () -> {
 			Matrix.from(map2);
 		});
 	}
@@ -29,8 +30,8 @@ class MatrixTest {
 		map1.put(new Coordinates(1, 2), (float) 2);
 		assertEquals(true, map1.equals(Matrix.from(EntryMap.from(map1)).getRepresentation().entryMap));
 		
-		Map<Coordinates, Float> map2 = new HashMap<Coordinates, Float>();
-		assertThrows(IllegalArgumentException.class, () -> {
+		Map<Coordinates, Float> map2 = null;
+		assertThrows(NullPointerException.class, () -> {
 			Matrix.from(EntryMap.from(map2));
 		});
 	}
@@ -119,11 +120,11 @@ class MatrixTest {
 		assertEquals(16, sumMatrix.get(new Coordinates(8, 8)));
 		assertEquals(32, sumMatrix.get(new Coordinates(16, 16)));
 		
-		assertThrows(IllegalArgumentException.class, () -> {
+		assertThrows(NullPointerException.class, () -> {
 			matrix1.plus(null);
 		});
 		assertThrows(IllegalArgumentException.class, () -> {
-			matrix1.minus(matrix3);
+			matrix1.plus(matrix3);
 		});
 	}
 
@@ -356,6 +357,16 @@ class MatrixTest {
 		List<Entry<Float>> answerList2 = Matrix.from(answerMap2).getRepresentation().stream().toList();
 		List<Entry<Float>> productList2 = Matrix.from(map3).times(Matrix.from(map4)).getRepresentation().stream().toList();
 		assertTrue(answerList2.equals(productList2));
+	}
+
+	@Test
+	public void testToString() {
+		TreeMap<Coordinates, Float> map1 = new TreeMap<>();
+		map1.put(new Coordinates(1, 1), (float) 1);
+		map1.put(new Coordinates(2, 2), (float) 2);
+		map1.put(new Coordinates(7, 3), (float) 3);
+		Matrix matrix1 = Matrix.from(map1);
+		System.out.println(matrix1.toString());
 	}
 
 }
